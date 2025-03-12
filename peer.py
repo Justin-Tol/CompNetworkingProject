@@ -15,6 +15,14 @@ def peer():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((IP, PORT))
     print(f'Peer is running on {IP}:{PORT}')
+    sock.sendto("REQUEST_FILENAMES".encode(), TRACKER_ADDR)
+    data, addr = sock.recvfrom(BUFFER)
+    parts = data.decode().split(" ")
+    if parts[0] == "FILENAMES":
+        fileNames = parts[1:]
+        print(f'Files available: {fileNames}')
+    else:
+        print("Files not found")
     command = input("command directory")
     parts = command.split(" ")
     if parts[0] == "UPLOADING":
@@ -42,6 +50,18 @@ def peer():
             sock.sendto(message.encode(), TRACKER_ADDR)
             data, addr = sock.recvfrom(BUFFER)
             print(data.decode())
+        elif parts[0] == "DOWNLOADING":
+            fileHash = parts[1]
+            
+            sock.sendto(f'REQUEST_PEERS {fileHash}'.encode(), TRACKER_ADDR)
+            data, addr = sock.recvfrom(BUFFER)
+            parts = data.decode().split(" ")
+            if parts[0] == "PEERS":
+                peers = parts[1:]
+                print(f'Peers found: {peers}')
+            else:
+                print("Peers not found")
+
 
     sock.close()
 
