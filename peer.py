@@ -50,15 +50,30 @@ def peer():
             sock.sendto(message.encode(), TRACKER_ADDR)
             data, addr = sock.recvfrom(BUFFER)
             print(data.decode())
-        elif parts[0] == "DOWNLOADING":
+    elif parts[0] == "DOWNLOADING":
+        fileName = parts[1]
+        
+        message = f'REQUEST_HASH {fileName}'
+        sock.sendto(message.encode(), TRACKER_ADDR)
+        data, addr = sock.recvfrom(BUFFER)
+        parts = data.decode().split(" ")
+        if parts[0] == "HASH":
             fileHash = parts[1]
-            
-            sock.sendto(f'REQUEST_PEERS {fileHash}'.encode(), TRACKER_ADDR)
+            message = f'REQUEST_PEERS {fileHash}'
+            sock.sendto(message.encode(), TRACKER_ADDR)
             data, addr = sock.recvfrom(BUFFER)
             parts = data.decode().split(" ")
             if parts[0] == "PEERS":
                 peers = parts[1:]
-                print(f'Peers found: {peers}')
+                print(f'Peers: {peers}')
+                peerAddr = peers[0]
+                message = f'DOWNLOADING {fileHash}'
+                sock.sendto(message.encode(), (peerAddr))
+                data, addr = sock.recvfrom(BUFFER)
+                if data.decode() == "DOWNLOADING OK":
+                    print("Downloading OK")
+                else:
+                    print("Downloading failed")
             else:
                 print("Peers not found")
 

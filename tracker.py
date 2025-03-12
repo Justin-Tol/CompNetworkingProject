@@ -38,23 +38,40 @@ def tracker():
             print(files)
             sock.sendto("UPLOADING OK".encode(), addr)
 
-        if parts[0] == "REQUEST_PEERS":
+        elif parts[0] == "REQUEST_PEERS":
 
-            fileHash = parts[1]
-            if fileHash in files:
+            fileName = parts[1]
+            for key, value in files.items():
+                if value["fileName"] == fileName:
+                    fileHash = key
+                    break
                 peers = files[fileHash]["peers"]
                 message = f'PEERS {peers}'
                 sock.sendto(message.encode(), addr)
             else:
                 print("Peers not found")
         
-        if parts[0] == "REQUEST_FILENAMES":
+        elif parts[0] == "REQUEST_FILENAMES":
             
             fileNames = []
             for fileHash in files:
                 fileName = files[fileHash]["fileName"]
                 fileNames.append(fileName)
             message = f'FILENAMES {fileNames}'
+            sock.sendto(message.encode(), addr)
+
+        elif parts[0] == "REQUEST_HASH":
+
+            fileName = parts[1]
+            for key, value in files.items():
+                if value["fileName"] == fileName:
+                    fileHash = key
+                    break
+            else:
+                print("File not found")
+                sock.sendto("FILE NOT FOUND".encode(), addr)
+                continue
+            message = f'HASH {fileHash}'
             sock.sendto(message.encode(), addr)
                 
 
