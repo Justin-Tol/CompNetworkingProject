@@ -19,7 +19,9 @@ def peer():
     data, addr = sock.recvfrom(BUFFER)
     parts = data.decode().split(" ")
     if parts[0] == "FILENAMES":
-        fileNames = parts[1:]
+        #print(data.decode())
+        #print(parts)
+        fileNames = parts[1]
         print(f'Files available: {fileNames}')
     else:
         print("Files not found")
@@ -39,11 +41,13 @@ def peer():
                 
             fileHash = hash.digest()
             fileName = os.path.basename(fileDirectory)
-        
-            uploadedFiles[fileHash] = {
-                "fileName": fileName,
-                "hash": fileHash
-            }
+            if(fileHash not in uploadedFiles):
+                uploadedFiles[fileHash] = {
+                    "fileName": fileName,
+                    "hash": fileHash
+                }
+            else:
+                print("File already uploaded")
 
             message = f'UPLOADING {fileHash} {fileName}'
 
@@ -51,31 +55,29 @@ def peer():
             data, addr = sock.recvfrom(BUFFER)
             print(data.decode())
     elif parts[0] == "DOWNLOADING":
-        fileName = parts[1]
         
-        message = f'REQUEST_HASH {fileName}'
-        sock.sendto(message.encode(), TRACKER_ADDR)
-        data, addr = sock.recvfrom(BUFFER)
-        parts = data.decode().split(" ")
-        if parts[0] == "HASH":
-            fileHash = parts[1]
-            message = f'REQUEST_PEERS {fileHash}'
+        if len(parts) != 2:
+            print("Invalid command")
+        else:
+            fileName = parts[1]
+            message = f'REQUEST_HASH {fileName}'
+            print(f'sending: {message}')
             sock.sendto(message.encode(), TRACKER_ADDR)
             data, addr = sock.recvfrom(BUFFER)
-            parts = data.decode().split(" ")
-            if parts[0] == "PEERS":
-                peers = parts[1:]
-                print(f'Peers: {peers}')
-                peerAddr = peers[0]
-                message = f'DOWNLOADING {fileHash}'
-                sock.sendto(message.encode(), (peerAddr))
+            hashParts = data.decode().split(" ")
+            if hashParts[0] == "HASH":
+                fileHash = hashParts[1]
+                #print(f'received hash: {fileHash}')
+                message = f'REQUEST_PEERS {fileHash}'
+                #print(f'sending: {message}')
+                sock.sendto(message.encode(), TRACKER_ADDR)
                 data, addr = sock.recvfrom(BUFFER)
-                if data.decode() == "DOWNLOADING OK":
-                    print("Downloading OK")
-                else:
-                    print("Downloading failed")
-            else:
-                print("Peers not found")
+                peersParts = data.decode().split(" ")
+                if peersParts[0] == "PEERS":
+                    peers = peersParts[1:]
+                    print(f'joined peers: {"".join(peers)}')
+                    print(f'received peers: {peers}')
+
 
 
     sock.close()
