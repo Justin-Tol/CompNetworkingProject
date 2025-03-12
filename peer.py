@@ -1,57 +1,51 @@
 import socket
 import threading
 import os
+from hashlib import sha256 as hasher
 
-# Start peer server to share files
-def start_peer_server(port):
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind(("0.0.0.0", port))
-    server.listen()
-    print(f"[PEER] Listening on {port}...")
+BUFFER = 1024
+IP = "127.0.0.1"
+PORT = 20132
+TRACKER_ADDR = ("127.0.0.1", 20131)
 
-    while True:
-        conn, _ = server.accept()
-        file_name = conn.recv(1024).decode()
-        if os.path.exists(file_name):
-            with open(file_name, "rb") as f:
-                conn.sendall(f.read())
-        else:
-            conn.send(b"File not found.")
-        conn.close()
+uploadedFiles = {}
 
-# Get peer list from tracker
-def get_peers(tracker_ip):
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect((tracker_ip, 5001))
-    peers = client.recv(1024).decode().split("\n")
-    client.close()
-    return peers
+def peer():
 
-# Request a file from another peer
-def request_file(peer_ip, peer_port, file_name):
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        client.connect((peer_ip, peer_port))
-        client.send(file_name.encode())
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind((IP, PORT))
+    print(f'Peer is running on {IP}:{PORT}')
+    command = input("command directory")
+    parts = command.split(" ")
+    if parts[0] == "UPLOADING":
+        fileDirectory = parts[1]
+        if(os.path.exists(fileDirectory)):
+            path = os.path.abspath(fileDirectory)
+            hash = hasher()
+            with open(path, "rb") as file:
+                
+                chunk = file.read(BUFFER)
+                while len(chunk) > 0:
+                    hash.update(chunk)
+                    chunk = file.read(BUFFER)
+                
+            fileHash = hash.digest()
+            fileName = os.path.basename(fileDirectory)
         
-        with open(f"downloaded_{file_name}", "wb") as f:
-            while chunk := client.recv(1024):
-                f.write(chunk)
-        
-        print(f"[DOWNLOADED] {file_name} from {peer_ip}")
-    except:
-        print("[ERROR] File request failed.")
-    client.close()
+            uploadedFiles[fileHash] = {
+                "fileName": fileName,
+                "hash": fileHash
+            }
 
-# Start peer
-peer_port = 6000
-threading.Thread(target=start_peer_server, args=(peer_port,)).start()
+            message = f'UPLOADING {fileHash} {fileName}'
 
-tracker_ip = "127.0.0.1"
-peers = get_peers(tracker_ip)
-print(f"[PEERS] Found: {peers}")
+            sock.sendto(message.encode(), TRACKER_ADDR)
+            data, addr = sock.recvfrom(BUFFER)
+            print(data.decode())
 
-# Example: Request a file from the first available peer
-if peers:
-    ip, port = peers[0].split(":")
-    request_file(ip, int(port), "poop.txt")
+    sock.close()
+
+
+
+if __name__ == "__main__":
+    peer()

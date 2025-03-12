@@ -1,21 +1,41 @@
 import socket
 import threading
+import time
+
+BUFFER = 1024
+IP = "127.0.0.1"
+PORT = 20131
 
 # List to store active peers
-peers = ["10.22.42.151:6000"]
+peers = {}
+files = {}
+
+
 
 def tracker():
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind(("0.0.0.0", 5000))  # Tracker listens on port 5000
-    server.listen()
-    print("[TRACKER] Running...")
 
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind((IP, PORT))
+    print(f'Tracker is running on {IP}:{PORT}')
     while True:
-        conn, addr = server.accept()
-        peer_ip = f"{addr[0]}:{addr[1]}"
-        if peer_ip not in peers:
-            peers.append(peer_ip)
-        conn.send("\n".join(peers).encode())  # Send list of peers
-        conn.close()
+        data, addr = sock.recvfrom(BUFFER)
+        parts = data.decode().split(" ")
 
-tracker()
+        if parts[0] == "UPLOADING":
+            
+            fileHash = parts[1]
+            fileName = parts[2]
+            
+            if fileHash not in files:
+                files[fileHash] = {
+                    "fileName": fileName,
+                    "peers": [addr]
+                }
+            
+            print(f'File {fileName} is being uploaded by {addr} with hash {int.from_bytes(fileHash.encode(), byteorder="big")}')
+            print(files)
+            sock.sendto("UPLOADING OK".encode(), addr)
+    
+
+if __name__ == "__main__":
+    tracker()
