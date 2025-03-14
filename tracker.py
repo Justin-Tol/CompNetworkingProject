@@ -42,7 +42,7 @@ def handleCommand(sock, address, command):
         
         #print(f'File {fileName} is being uploaded by {address} with hash {int.from_bytes(fileHash.encode(), byteorder="big")}')
         print(files)
-        sock.sendto("UPLOADING OK".encode(), address)
+        sock.sendto("UPLOADING_OK".encode(), address)
 
     elif parts[0] == "REQUEST_PEERS":
 
