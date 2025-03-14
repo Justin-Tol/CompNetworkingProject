@@ -28,9 +28,9 @@ def handleCommand(sock, address, command):
 
     if parts[0] == "UPLOADING":
     
-        fileHash = eval(parts[1])
-        fileName = parts[2]
-        print(address[0])
+        fileHash = parts[2:]
+        fileName = parts[1]
+        fileHash = "".join(fileHash)
         
         if fileHash not in files:
             files[fileHash] = {

@@ -21,13 +21,13 @@ def peer():
     if parts[0] == "FILENAMES":
         #print(data.decode())
         #print(parts)
-        fileNames = parts[1]
+        fileNames = "".join(parts[1:])
         print(f'Files available: {fileNames}')
     else:
         print("Files not found")
     command = input("command directory")
     parts = command.split(" ")
-    if parts[0] == "UPLOADING":
+    if parts[0] == "UPLOADING" or parts[0] == "U":
         fileDirectory = parts[1]
         if(os.path.exists(fileDirectory)):
             path = os.path.abspath(fileDirectory)
@@ -40,6 +40,7 @@ def peer():
                     chunk = file.read(BUFFER)
                 
             fileHash = hash.digest()
+            #print(f'hash: {fileHash}')
             fileName = os.path.basename(fileDirectory)
             if(fileHash not in uploadedFiles):
                 uploadedFiles[fileHash] = {
@@ -49,11 +50,12 @@ def peer():
             else:
                 print("File already uploaded")
 
-            message = f'UPLOADING {fileHash} {fileName}'
+            message = f'UPLOADING {fileName} {fileHash}'
+            #print(f'sending: {message}')
 
             sock.sendto(message.encode(), TRACKER_ADDR)
             data, addr = sock.recvfrom(BUFFER)
-            print(data.decode())
+            #print(data.decode())
     elif parts[0] == "DOWNLOADING":
         
         if len(parts) != 2:
@@ -75,8 +77,10 @@ def peer():
                 peersParts = data.decode().split(" ")
                 if peersParts[0] == "PEERS":
                     peers = peersParts[1:]
-                    print(f'joined peers: {"".join(peers)}')
-                    print(f'received peers: {peers}')
+                    peers = "".join(peers)
+                    print(f'peers received: {peers}')
+                    
+
 
 
 
