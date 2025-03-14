@@ -2,6 +2,7 @@ import socket
 import threading
 import os
 from hashlib import sha256 as hasher
+import ast
 
 BUFFER = 1024
 IP = "127.0.0.1"
@@ -15,7 +16,7 @@ def peer():
     try:
         sock.bind((IP, PORT))
     except:
-        sock.bind((IP, PORT+1))
+        sock.bind((IP, 20133))
     print(f'Peer is running on {IP}:{PORT}')
     sock.sendto("REQUEST_FILENAMES".encode(), TRACKER_ADDR)
     data, addr = sock.recvfrom(BUFFER)
@@ -69,6 +70,13 @@ def peer():
                         
                         chunkIndex = int(parts[1])
                         fileHash = eval("".join(parts[2:]))
+                        print(f'chunks: {uploadedFiles[fileHash]["chunks"]}')
+                        message = f'SENDING_CHUNK {chunkIndex} {uploadedFiles[fileHash]["chunks"][chunkIndex]}'
+                        #print(f'sending: {message}')
+                        sock.sendto(message.encode(), peerAddr)
+
+                    elif parts[0] == "REQUEST_COUNT":
+                        fileHash = eval("".join(parts[1:]))
 
                         if "chunks" not in uploadedFiles[fileHash]:
                             uploadedFiles[fileHash]["chunks"] = []
@@ -77,14 +85,15 @@ def peer():
                                 chunk = file.read(BUFFER)
                                 while len(chunk) > 0:
                                     uploadedFiles[fileHash]["chunks"].append(chunk)
+                                    #(f'appended chunk: {chunk}')
                                     chunk = file.read(BUFFER)
                             
                             uploadedFiles[fileHash]["chunkCount"] = len(uploadedFiles[fileHash]["chunks"])
                         
-                        chunk = uploadedFiles[fileHash]["chunks"][chunkIndex]
-                        message = f'SENDING_CHUNK {chunkIndex} {chunk}'
-                        print(f'sending: {message}')
+                        message = f'CHUNK_COUNT {uploadedFiles[fileHash]["chunkCount"]}'
+                        #print(f'sending: {message}')
                         sock.sendto(message.encode(), peerAddr)
+                    
 
 
             else:
@@ -97,7 +106,7 @@ def peer():
         else:
             fileName = parts[1]
             message = f'REQUEST_HASH {fileName}'
-            print(f'sending: {message}')
+            #print(f'sending: {message}')
             sock.sendto(message.encode(), TRACKER_ADDR)
             data, addr = sock.recvfrom(BUFFER)
             hashParts = data.decode().split(" ")
@@ -116,13 +125,49 @@ def peer():
 
                     #print(peers)
                     peer = peers[0]
-                    message = f'REQUESTING_CHUNK 0 {fileHash}'
-                    print(f'sending: {message}')
-                    sock.sendto(message.encode(), (peer, 20132))
+                    message = f'REQUEST_COUNT {fileHash}'
+                    #print(f'sending: {message}')
+                    sock.sendto(message.encode(), (peer, PORT))
+                    data, addr = sock.recvfrom(BUFFER)
+                    parts = data.decode().split(" ")
+                    if parts[0] == "CHUNK_COUNT":
+                        chunkCount = int(parts[1])
+                        
+                        ChunkBuffer = [None] * chunkCount
+                        ChunkDownloaded = [False] * chunkCount
+                        index = 0
 
-                    
-
-
+                        while not all(ChunkDownloaded):
+                            
+                            message = f'REQUESTING_CHUNK {index} {fileHash}'
+                            #print(f'sending: {message}')
+                            sock.sendto(message.encode(), (peer, PORT))
+                            data, addr = sock.recvfrom(BUFFER)
+                            parts = data.decode().split(" ")
+                            if parts[0] == "SENDING_CHUNK":
+                                chunkIndex = int(parts[1])
+                                chunk = eval("".join(parts[2:]))
+                                print(f'chunks: {ChunkBuffer}')
+                                ChunkBuffer[chunkIndex] = chunk
+                                print(f'chunk received: {chunk}')
+                                print(f'chunks: {ChunkBuffer}')
+                                ChunkDownloaded[chunkIndex] = True
+                                index += 1
+                        print("All chunks downloaded")
+                        hash = hasher()
+                        with open(fileName + ".temp", "wb") as file:
+                            for chunk in ChunkBuffer:
+                                hash.update(chunk)
+                                file.write(chunk)
+                                print(f'writing chunk: {chunk}')
+                        print(f'hash: {hash.digest()} {type(hash.digest())}')
+                        print(f'file hash: {fileHash.encode()} {type(fileHash.encode())}')
+                        print(f'hashes match: {hash.digest() == ast.literal_eval(fileHash)}')
+                        if hash.digest() == ast.literal_eval(fileHash):
+                            print("File downloaded successfully")
+                        else:
+                            print("File download failed")
+                            os.remove(fileName + ".temp")
 
 
     sock.close()
