@@ -30,7 +30,7 @@ def handleCommand(sock, address, command):
     
         fileHash = parts[2:]
         fileName = parts[1]
-        fileHash = "".join(fileHash)
+        fileHash = eval("".join(fileHash))
         
         if fileHash not in files:
             files[fileHash] = {

@@ -25,7 +25,7 @@ def peer():
         print(f'Files available: {fileNames}')
     else:
         print("Files not found")
-    command = input("command directory")
+    command = input("Input command: ")
     parts = command.split(" ")
     if parts[0] == "UPLOADING" or parts[0] == "U":
         fileDirectory = parts[1]
@@ -56,7 +56,7 @@ def peer():
             sock.sendto(message.encode(), TRACKER_ADDR)
             data, addr = sock.recvfrom(BUFFER)
             #print(data.decode())
-    elif parts[0] == "DOWNLOADING":
+    elif parts[0] == "DOWNLOADING" or parts[0] == "D":
         
         if len(parts) != 2:
             print("Invalid command")
@@ -77,8 +77,12 @@ def peer():
                 peersParts = data.decode().split(" ")
                 if peersParts[0] == "PEERS":
                     peers = peersParts[1:]
-                    peers = "".join(peers)
-                    print(f'peers received: {peers}')
+                    peers = eval("".join(peers))
+                    #print(f'peers received: {peers}')
+
+                    for i in range(len(peers)):
+
+                        print(f'Peer {i+1}: {peers[i]}')
                     
 
 
