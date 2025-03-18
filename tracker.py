@@ -28,9 +28,9 @@ def handleCommand(sock, address, command):
 
     if parts[0] == "UPLOADING":
     
-        fileHash = parts[2:]
+        fileHash = parts[2]
         fileName = parts[1]
-        fileHash = eval("".join(fileHash))
+        
         
         if fileHash not in files:
             files[fileHash] = {
@@ -46,7 +46,7 @@ def handleCommand(sock, address, command):
 
     elif parts[0] == "REQUEST_PEERS":
 
-        fileHash = eval(parts[1])
+        fileHash = (parts[1])
         if fileHash in files:
             peers = files[fileHash]["peers"]
             message = f'PEERS {peers}'

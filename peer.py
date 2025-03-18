@@ -42,7 +42,7 @@ def peer():
                     hash.update(chunk)
                     chunk = file.read(BUFFER)
                 
-            fileHash = hash.digest()
+            fileHash = hash.hexdigest()
             #print(f'hash: {fileHash}')
             fileName = os.path.basename(fileDirectory)
             if(fileHash not in uploadedFiles):
@@ -69,15 +69,14 @@ def peer():
                     if parts[0] == "REQUESTING_CHUNK":
                         
                         chunkIndex = int(parts[1])
-                        fileHash = eval("".join(parts[2:]))
+                        fileHash = parts[2]
                         print(f'chunks: {uploadedFiles[fileHash]["chunks"]}')
                         message = f'SENDING_CHUNK {chunkIndex} {uploadedFiles[fileHash]["chunks"][chunkIndex]}'
                         #print(f'sending: {message}')
                         sock.sendto(message.encode(), peerAddr)
 
                     elif parts[0] == "REQUEST_COUNT":
-                        fileHash = eval("".join(parts[1:]))
-
+                        fileHash = parts[1]
                         if "chunks" not in uploadedFiles[fileHash]:
                             uploadedFiles[fileHash]["chunks"] = []
 
@@ -160,10 +159,10 @@ def peer():
                                 hash.update(chunk)
                                 file.write(chunk)
                                 print(f'writing chunk: {chunk}')
-                        print(f'hash: {hash.digest()} {type(hash.digest())}')
+                        print(f'hash: {hash.hexdigest()} {type(hash.hexdigest())}')
                         print(f'file hash: {fileHash.encode()} {type(fileHash.encode())}')
-                        print(f'hashes match: {hash.digest() == ast.literal_eval(fileHash)}')
-                        if hash.digest() == ast.literal_eval(fileHash):
+                        print(f'hashes match: {hash.hexdigest() == (fileHash)}')
+                        if hash.hexdigest() == (fileHash):
                             print("File downloaded successfully")
                         else:
                             print("File download failed")
