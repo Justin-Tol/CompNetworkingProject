@@ -18,3 +18,5 @@ We implement core networking concepts such as:
 - Basic authentication for secure connections
 
 This project helps us understand how distributed networks operate, the challenges of real-time communication, and the importance of data integrity in file transfers.
+
+## USAGE

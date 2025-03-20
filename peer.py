@@ -8,7 +8,7 @@ BUFFER = 1024
 IP = "127.0.0.1"
 PORT = 20132
 TRACKER_ADDR = ("127.0.0.1", 20131)
-CHUNK_SIZE = BUFFER // 12
+CHUNK_SIZE = BUFFER // 8
 
 uploadedFiles = {}
 
@@ -38,10 +38,10 @@ def peer():
             hash = hasher()
             with open(path, "rb") as file:
                 
-                chunk = file.read(BUFFER)
+                chunk = file.read(CHUNK_SIZE)
                 while len(chunk) > 0:
                     hash.update(chunk)
-                    chunk = file.read(BUFFER)
+                    chunk = file.read(CHUNK_SIZE)
                 
             fileHash = hash.hexdigest()
             #print(f'hash: {fileHash}')
