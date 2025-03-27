@@ -8,7 +8,7 @@ BUFFER = 1024
 IP = "127.0.0.1"
 PORT = 20132
 TRACKER_ADDR = ("127.0.0.1", 20131)
-CHUNK_SIZE = BUFFER // 8
+CHUNK_SIZE = BUFFER // 32
 
 uploadedFiles = {}
 
@@ -71,12 +71,17 @@ def peer():
                         
                         chunkIndex = int(parts[1])
                         fileHash = parts[2]
-                        chunkHash = hasher(uploadedFiles[fileHash]["chunks"][chunkIndex]).hexdigest()
+                        chunk = uploadedFiles[fileHash]["chunks"][chunkIndex]
+                        chunkLen = len(chunk)
+                        chunkHash = hasher(chunk).hexdigest()
                         #print(f'chunks: {uploadedFiles[fileHash]["chunks"]}')
-                        message = f'SENDING_CHUNK {chunkIndex} {chunkHash} {uploadedFiles[fileHash]["chunks"][chunkIndex]}'
+                        message = f'SENDING_CHUNK {chunkIndex} {chunkLen} {chunkHash}|'
                         #print(f'sending: {message}')
                         print(f'sending chunk {chunkIndex}')
-                        sock.sendto(message.encode(), peerAddr)
+                        message = message.encode() + chunk
+                        #print(f'sent {message}')
+                        sock.sendto(message, peerAddr)
+
 
                     elif parts[0] == "REQUEST_COUNT":
                         fileHash = parts[1]
@@ -145,11 +150,18 @@ def peer():
                             #print(f'sending: {message}')
                             sock.sendto(message.encode(), (peer, PORT))
                             data, addr = sock.recvfrom(BUFFER)
-                            parts = data.decode().split(" ")
+                            #print(f'received {data}')
+                            parts = data.split(b'|')
+                            #print(f'parts {parts}')
+                            chunk = parts[1]
+                            parts = parts[0].decode().split(" ")
+                            #(f'new parts {parts}')
                             if parts[0] == "SENDING_CHUNK":
                                 chunkIndex = int(parts[1])
-                                chunk = eval("".join(parts[3:]))
-                                recHash = parts[2]
+                                recLen = int(parts[2])
+                                chunkLen = len(chunk)
+                                recHash = parts[3]
+                                print(f'received lenght: {recLen}, received chunk\'s length: {chunkLen}')
                                 print(f'chunk {index} received hash match?{hasher(chunk).hexdigest() == recHash}')
                                 #print(f'chunks: {ChunkBuffer}')
                                 ChunkBuffer[chunkIndex] = chunk
