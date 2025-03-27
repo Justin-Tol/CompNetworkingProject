@@ -79,7 +79,7 @@ def peer():
                         #print(f'sending: {message}')
                         print(f'sending chunk {chunkIndex}')
                         message = message.encode() + chunk
-                        print(f'sent {message}')
+                        #print(f'sent {message}')
                         sock.sendto(message, peerAddr)
 
 
