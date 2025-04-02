@@ -30,16 +30,23 @@ def handleCommand(sock, address, command):
     
         fileHash = parts[2]
         fileName = parts[1]
+
         
-        
-        if fileHash not in files:
-            files[fileHash] = {
-                "fileName": fileName,
-                "peers": [address[0]]
-            }
-        else:
-            files[fileHash]["peers"].append(address[0])
-        
+        try:
+            if fileHash not in files:
+                for file in files: #check if any other files have the same file name 
+                    if fileName == file.fileName:
+                        raise ValueError(f"ERR: file with the same name was found: {fileName}")
+                    
+                files[fileHash] = {
+                    "fileName": fileName,
+                    "peers": [address[0]]
+                }
+            else:
+                files[fileHash]["peers"].append(address[0])
+
+        except ValueError as e:
+            sock.sendto(str(e).encode(), address)
         #print(f'File {fileName} is being uploaded by {address} with hash {int.from_bytes(fileHash.encode(), byteorder="big")}')
         print(files)
         sock.sendto("UPLOADING_OK".encode(), address)
