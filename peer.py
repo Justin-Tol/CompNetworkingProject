@@ -80,7 +80,7 @@ def peer():
                         print(f'sending chunk {chunkIndex}')
                         message = message.encode() + chunk
                         #print(f'sent {message}')
-                        sock.sendto(message, peerAddr)
+                        sock.sendall(message, peerAddr)
 
 
                     elif parts[0] == "REQUEST_COUNT":
@@ -163,6 +163,14 @@ def peer():
                                 recHash = parts[3]
                                 print(f'received lenght: {recLen}, received chunk\'s length: {chunkLen}')
                                 print(f'chunk {index} received hash match?{hasher(chunk).hexdigest() == recHash}')
+                                
+                                '''while((recLen - chunkLen) > 0):
+                                    moreChunk, addr = sock.recvfrom(min(BUFFER, (recLen - chunkLen)))
+                                    print(f'adding more to chunk')
+                                    chunk += moreChunk
+                                    chunkLen = len(chunk) '''
+
+
                                 #print(f'chunks: {ChunkBuffer}')
                                 ChunkBuffer[chunkIndex] = chunk
                                 #print(f'chunk received: {chunk}')
