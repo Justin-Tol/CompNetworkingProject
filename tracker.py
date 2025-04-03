@@ -16,8 +16,8 @@ def handle_command(conn, addr, command):
             try:
                 if fileHash not in files:
                     for file in files: #duplicate file name
-                        if fileName == file.fileName:
-                            raise ValueError(f"ERR: file with the same name was found: {fileName}")
+                        if fileName == files[file]["fileName"]:
+                            raise ValueError(f"ERR: file name already exists was found: {fileName}")
                         
                     files[fileHash] = {
                         "fileName": fileName,
@@ -30,6 +30,7 @@ def handle_command(conn, addr, command):
             #print(f'File {fileName} is being uploaded by {address} with hash {int.from_bytes(fileHash.encode(), byteorder="big")}')
             print(files)
             conn.send("UPLOADING_OK".encode())
+
         elif parts[0] == "REQUEST_PEERS":
             fileHash = parts[1]
             if fileHash in files:
