@@ -11,17 +11,25 @@ def handle_command(conn, addr, command):
     parts = command.split(" ")
     try:
         if parts[0] == "UPLOADING":
-            fileName = parts[1]
             fileHash = parts[2]
-            if fileHash not in files:
-                files[fileHash] = {
-                    "fileName": fileName,
-                    "peers": [addr[0]]
-                }
-            else:
-                if addr[0] not in files[fileHash]["peers"]:
+            fileName = parts[1]
+            try:
+                if fileHash not in files:
+                    for file in files: #duplicate file name
+                        if fileName == files[file]["fileName"]:
+                            raise ValueError(f"ERR: file name already exists was found: {fileName}")
+                        
+                    files[fileHash] = {
+                        "fileName": fileName,
+                        "peers": [addr[0]]
+                    }
+                else:
                     files[fileHash]["peers"].append(addr[0])
-            conn.send(b"UPLOADING_OK")
+            except ValueError as e:
+                conn.send(str(e).encode())
+            #print(f'File {fileName} is being uploaded by {address} with hash {int.from_bytes(fileHash.encode(), byteorder="big")}')
+            print(files)
+            conn.send("UPLOADING_OK".encode())
 
         elif parts[0] == "REQUEST_PEERS":
             fileHash = parts[1]
