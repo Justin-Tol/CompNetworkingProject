@@ -34,7 +34,7 @@ def handleCommand(sock, address, command):
         
         try:
             if fileHash not in files:
-                for file in files: #check if any other files have the same file name 
+                for file in files: #duplicate file name
                     if fileName == file.fileName:
                         raise ValueError(f"ERR: file with the same name was found: {fileName}")
                     
