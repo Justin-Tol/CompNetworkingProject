@@ -49,6 +49,16 @@ def handle_peer_connection(conn, addr):
             chunk_hash = hasher(chunk).hexdigest()
             header = f"SENDING_CHUNK {chunkIndex} {len(chunk)} {chunk_hash}|".encode()
             conn.send(header + chunk)
+            # Wait for ACK with timeout
+            try:
+                conn.settimeout(10)  # 10-second timeout for ACK
+                ack = conn.recv(3)
+                if ack == b"ACK":
+                    print(f"ACK received for chunk {chunkIndex}")
+                else:
+                    print(f"Invalid ACK for chunk {chunkIndex}: {ack}")
+            except socket.timeout:
+                print(f"Timeout waiting for ACK for chunk {chunkIndex}")
     finally:
         conn.close()
 
@@ -172,11 +182,13 @@ def peer():
                             parts = header.decode().split()
                             chunk_len = int(parts[2])
                             chunk = recv_exact(s, chunk_len)
-                            
                             if hasher(chunk).hexdigest() == parts[3]:
                                 chunks[i] = chunk
                                 downloaded[i] = True
                                 print(f"Chunk {i} downloaded")
+                                # Send ACK to uploader
+                                # Comment ACK to test
+                                s.send(b"ACK")
                                 break
                     except:
                         print(f"Error downloading chunk {i}, retrying...")
