@@ -1,11 +1,16 @@
 import socket
 import threading
+import time
 
 BUFFER = 1024
 IP = "127.0.0.1"
 PORT = 20131
+LOCK = threading.Lock()
+PING_INTERVAL = 30
+PING_TIMEOUT = 5
 
 files = {}
+peers = []
 
 def handle_command(conn, addr, command):
     parts = command.split(" ")
@@ -25,6 +30,10 @@ def handle_command(conn, addr, command):
                     }
                 else:
                     files[fileHash]["peers"].append(addr[0])
+
+                if(not addr in peers):
+                    peers.append(addr)
+
             except ValueError as e:
                 conn.send(str(e).encode())
             #print(f'File {fileName} is being uploaded by {address} with hash {int.from_bytes(fileHash.encode(), byteorder="big")}')
@@ -72,5 +81,46 @@ def tracker():
         conn, addr = sock.accept()
         threading.Thread(target=handle_connection, args=(conn, addr)).start()
 
+def ping_peers():
+    while True:
+        startTime = time.time()
+
+        pingSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        with pingSocket as s:
+            s.settimeout(PING_TIMEOUT)
+
+            with LOCK:
+                currentPeers = peers.copy()
+            
+            for addr in currentPeers:
+                try:
+                    s.connect(addr)
+                    s.sendall(b'PING')
+
+                    response = s.recv(BUFFER)
+                    if response != b'PONG':
+                        with LOCK: 
+                            if addr in peers:
+                                peers.remove(addr)
+                                print(f'removed peer ${addr} invalid response')
+
+                    s.close()
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    s.settimeout(PING_TIMEOUT)
+                except(socket.timeout, ConnectionRefusedError, OSError) as err:
+                    with LOCK:
+                        if addr in peers:
+                            peers.remove(addr)
+                            print(f'removed peer ${addr} unresponsive')
+                    
+                    s.close()
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    s.settimeout(PING_TIMEOUT)
+
+
+        elapsedTime = time.time() - startTime
+        time.sleep(max(0, PING_INTERVAL - elapsedTime))
+
 if __name__ == "__main__":
+    pingThread = threading.Thread(target=ping_peers, daemon=True).start()
     tracker()

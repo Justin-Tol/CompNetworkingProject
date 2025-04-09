@@ -185,7 +185,7 @@ def peer():
                     break
 
             if all(downloaded):
-                with open(filename, 'wb') as f:
+                with open("copyOf" + filename, 'wb') as f:
                     for chunk in chunks:
                         f.write(chunk)
                 print("File downloaded successfully")
