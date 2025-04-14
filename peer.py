@@ -49,6 +49,10 @@ def handle_peer_connection(conn, addr):
             chunk_hash = hasher(chunk).hexdigest()
             header = f"SENDING_CHUNK {chunkIndex} {len(chunk)} {chunk_hash}|".encode()
             conn.send(header + chunk)
+        elif parts[0] == "PING":
+
+            print(f'pong back to {addr}')
+            conn.send(b'PONG')
     finally:
         conn.close()
 
