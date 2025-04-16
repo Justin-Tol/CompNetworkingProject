@@ -4,10 +4,10 @@ import os
 from hashlib import sha256 as hasher
 import time
 
-BUFFER = 1024
+BUFFER = 2048
 IP = "127.0.0.1"
 PORT = 20132
-TRACKER_ADDR = (IP, 20131)
+TRACKER_ADDR = ('127.0.0.1', 20131)
 CHUNK_SIZE = 1024
 
 uploadedFiles = {}
@@ -153,16 +153,34 @@ def peer():
                     continue
                 peers = eval(response.split(' ', 1)[1])
 
-            # Connect to first peer
-            peer_ip = peers[0]
-            print(f"Downloading from {peer_ip}")
+            # Display peers and let user choose
+            if not peers:
+                print("No peers available")
+                continue
+                
+            print("\nAvailable peers:")
+            for idx, peer_ip in enumerate(peers, 1):
+                print(f"{idx}. {peer_ip}")
+            
+            while True:
+                try:
+                    choice = int(input("\nEnter peer number to download from: "))
+                    if 1 <= choice <= len(peers):
+                        peer_ip = peers[choice - 1]
+                        break
+                    else:
+                        print("Invalid number. Try again.")
+                except ValueError:
+                    print("Please enter a numeric value.")
+
+            print(f"\nDownloading from {peer_ip}")
 
             # Get chunk count
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((peer_ip, PORT))
+                s.connect((peer_ip, 20132))
                 s.send(f"REQUEST_COUNT {file_hash}".encode())
                 response = s.recv(BUFFER).decode()
-                chunk_count = int(response.split()[1])
+                chunk_count = int(response.split()[1])                
 
             # Download chunks
             chunks = [None] * chunk_count
@@ -175,7 +193,7 @@ def peer():
                     try:
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                             s.settimeout(5)
-                            s.connect((peer_ip, PORT))
+                            s.connect((peer_ip, 20132))
                             s.send(f"REQUESTING_CHUNK {i} {file_hash}".encode())
                             
                             header = recv_until(s, b'|')
