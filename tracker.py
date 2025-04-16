@@ -34,8 +34,8 @@ def handle_command(conn, addr, command):
                 
                 # Add peer to global list if not already present
                 if addr not in peers:
-                    peers.append(addr)
-                    print(f"Added new peer: {addr}")
+                    peers.append((addr[0], 20132))
+                    print(f"Added new peer: {(addr[0], 20132)}")
                 
                 # Update files dictionary
                 if fileHash not in files:
