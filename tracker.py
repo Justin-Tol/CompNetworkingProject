@@ -14,20 +14,26 @@ def handle_command(conn, addr, command):
             fileHash = parts[2]
             fileName = parts[1]
             try:
-                if fileHash not in files:
-                    for file in files: #duplicate file name
-                        if fileName == files[file]["fileName"]:
-                            raise ValueError(f"ERR: file name already exists was found: {fileName}")
-                        
+                # Remove existing entries with the same filename but different hash
+                existing_hashes = [h for h in files if files[h]["fileName"] == fileName and h != fileHash]
+                for h in existing_hashes:
+                    del files[h]
+
+                # Add or update the current fileHash entry
+                if fileHash in files:
+                    # Avoid duplicate peer entries
+                    if addr[0] not in files[fileHash]["peers"]:
+                        files[fileHash]["peers"].append(addr[0])
+                else:
+                    # Create new entry
                     files[fileHash] = {
                         "fileName": fileName,
                         "peers": [addr[0]]
                     }
-                else:
-                    files[fileHash]["peers"].append(addr[0])
-            except ValueError as e:
+
+                conn.send("UPLOADING_OK".encode())
+            except Exception as e:
                 conn.send(str(e).encode())
-            #print(f'File {fileName} is being uploaded by {address} with hash {int.from_bytes(fileHash.encode(), byteorder="big")}')
             print(files)
             conn.send("UPLOADING_OK".encode())
 
