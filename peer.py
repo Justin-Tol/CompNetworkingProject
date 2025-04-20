@@ -171,7 +171,7 @@ def peer():
                     try:
                         choice = int(input("\nEnter peer number to download from: "))
                         if 1 <= choice <= len(peers):
-                            peer_ip = peers[choice - 1]
+                            peer_ip = peers[choice - 1][0]
                             break
                         else:
                             print("Invalid number. Try again.")

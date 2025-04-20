@@ -66,6 +66,15 @@ def handle_command(conn, addr, command):
                 fileNames = [files[hash]["fileName"] for hash in files]
                 message = f"FILENAMES {' '.join(fileNames)}"
                 conn.send(message.encode())
+
+        elif parts[0] == "REQUEST_HASH":
+             fileName = parts[1]
+             for hash, data in files.items():
+                 if data["fileName"] == fileName:
+                     conn.send(f"HASH {hash}".encode())
+                     break
+             else:
+                 conn.send(b"FILE_NOT_FOUND")
         
     except Exception as e:
         print(f"Error handling command: {e}")
