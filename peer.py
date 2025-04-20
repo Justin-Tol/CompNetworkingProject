@@ -59,6 +59,10 @@ def handle_peer_connection(conn, addr):
                     print(f"Invalid ACK for chunk {chunkIndex}: {ack}")
             except socket.timeout:
                 print(f"Timeout waiting for ACK for chunk {chunkIndex}")
+        elif parts[0] == "PING":
+
+            print(f'pong back to {addr}')
+            conn.send(b'PONG')
     finally:
         conn.close()
 
