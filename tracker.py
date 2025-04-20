@@ -21,36 +21,36 @@ def handle_command(conn, addr, command):
         if parts[0] == "UPLOADING":
             fileHash = parts[2]
             fileName = parts[1]
-            
-            with LOCK:
-                print(f"Current peers before adding: {peers}")
-                print(f"New peer address: {addr}")
-                
-                # Check for duplicate filename
-                for existing_hash in files:
-                    if fileName == files[existing_hash]["fileName"]:
-                        conn.send(f"ERR: File name already exists: {fileName}".encode())
-                        return
-                
-                # Add peer to global list if not already present
-                if addr not in peers:
-                    peers.append((addr[0], 20132))
-                    print(f"Added new peer: {(addr[0], 20132)}")
-                
-                # Update files dictionary
-                if fileHash not in files:
+            try:
+                with LOCK: 
+                    print(f'current peers before adding: {peers}')
+                    print(f'new peer address: {addr}')
+                    if addr not in peers:
+                        peers.append((addr[0], 20132))
+                        print(f"Added new peer: {(addr[0], 20132)}")
+
+                # Remove existing entries with the same filename but different hash
+                existing_hashes = [h for h in files if files[h]["fileName"] == fileName and h != fileHash]
+                for h in existing_hashes:
+                    del files[h]
+
+                # Add or update the current fileHash entry
+                if fileHash in files:
+                    # Avoid duplicate peer entries
+                    if addr[0] not in files[fileHash]["peers"]:
+                        files[fileHash]["peers"].append(addr[0])
+                else:
+                    # Create new entry
                     files[fileHash] = {
                         "fileName": fileName,
                         "peers": [addr]
                     }
-                else:
-                    if addr not in files[fileHash]["peers"]:
-                        files[fileHash]["peers"].append(addr)
-                
-                print(f"Files after update: {files}")
-                print(f"Peers after update: {peers}")
-                
+
                 conn.send("UPLOADING_OK".encode())
+            except Exception as e:
+                conn.send(str(e).encode())
+            print(files)
+            conn.send("UPLOADING_OK".encode())
 
         elif parts[0] == "REQUEST_PEERS":
             fileHash = parts[1]

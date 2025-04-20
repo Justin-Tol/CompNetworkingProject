@@ -4,10 +4,10 @@ import os
 from hashlib import sha256 as hasher
 import time
 
-BUFFER = 1024
+BUFFER = 2048
 IP = "127.0.0.1"
 PORT = 20132
-TRACKER_ADDR = (IP, 20131)
+TRACKER_ADDR = ('127.0.0.1', 20131)
 CHUNK_SIZE = 1024
 
 uploadedFiles = {}
@@ -49,6 +49,16 @@ def handle_peer_connection(conn, addr):
             chunk_hash = hasher(chunk).hexdigest()
             header = f"SENDING_CHUNK {chunkIndex} {len(chunk)} {chunk_hash}|".encode()
             conn.send(header + chunk)
+            # Wait for ACK with timeout
+            try:
+                conn.settimeout(10)  # 10-second timeout for ACK
+                ack = conn.recv(3)
+                if ack == b"ACK":
+                    print(f"ACK received for chunk {chunkIndex}")
+                else:
+                    print(f"Invalid ACK for chunk {chunkIndex}: {ack}")
+            except socket.timeout:
+                print(f"Timeout waiting for ACK for chunk {chunkIndex}")
         elif parts[0] == "PING":
 
             print(f'pong back to {addr}')
@@ -121,80 +131,103 @@ def peer():
                     print("File uploaded successfully")
 
         elif parts[0].upper() in ("DOWNLOADING", "D"):
-            if len(parts) < 2:
-                print("Invalid command")
-                continue
-            filename = parts[1]
-
-            # Get file hash from tracker
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect(TRACKER_ADDR)
-                s.send(f"REQUEST_HASH {filename}".encode())
-                response = s.recv(BUFFER).decode()
-                if response.startswith("HASH"):
-                    file_hash = response.split()[1]
-                else:
-                    print("File not found")
+            try:
+                if len(parts) < 2:
+                    print("Invalid command")
                     continue
+                filename = parts[1]
 
-            # Get peers from tracker
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect(TRACKER_ADDR)
-                s.send(f"REQUEST_PEERS {file_hash}".encode())
-                response = s.recv(BUFFER).decode()
-                if not response.startswith("PEERS"):
-                    print("No peers found")
+                # Get file hash from tracker
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.connect(TRACKER_ADDR)
+                    s.send(f"REQUEST_HASH {filename}".encode())
+                    response = s.recv(BUFFER).decode()
+                    if response.startswith("HASH"):
+                        file_hash = response.split()[1]
+                    else:
+                        print("File not found")
+                        continue
+
+                # Get peers from tracker
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.connect(TRACKER_ADDR)
+                    s.send(f"REQUEST_PEERS {file_hash}".encode())
+                    response = s.recv(BUFFER).decode()
+                    if not response.startswith("PEERS"):
+                        print("No peers found")
+                        continue
+                    peers = eval(response.split(' ', 1)[1])
+
+                # Display peers and let user choose
+                if not peers:
+                    print("No peers available")
                     continue
-                peers = eval(response.split(' ', 1)[1])
-
-            # Connect to first peer
-            peer_ip = peers[0]
-            print(f"Downloading from {peer_ip}")
-
-            # Get chunk count
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((peer_ip, PORT))
-                s.send(f"REQUEST_COUNT {file_hash}".encode())
-                response = s.recv(BUFFER).decode()
-                chunk_count = int(response.split()[1])
-
-            # Download chunks
-            chunks = [None] * chunk_count
-            downloaded = [False] * chunk_count
-            start_time = time.time()
-            timeout = 30
-
-            for i in range(chunk_count):
-                while time.time() - start_time < timeout:
+                    
+                print("\nAvailable peers:")
+                for idx, peer_ip in enumerate(peers, 1):
+                    print(f"{idx}. {peer_ip}")
+                
+                while True:
                     try:
-                        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                            s.settimeout(5)
-                            s.connect((peer_ip, PORT))
-                            s.send(f"REQUESTING_CHUNK {i} {file_hash}".encode())
-                            
-                            header = recv_until(s, b'|')
-                            parts = header.decode().split()
-                            chunk_len = int(parts[2])
-                            chunk = recv_exact(s, chunk_len)
-                            
-                            if hasher(chunk).hexdigest() == parts[3]:
-                                chunks[i] = chunk
-                                downloaded[i] = True
-                                print(f"Chunk {i} downloaded")
-                                break
-                    except:
-                        print(f"Error downloading chunk {i}, retrying...")
-                else:
-                    print("Download timeout")
-                    break
+                        choice = int(input("\nEnter peer number to download from: "))
+                        if 1 <= choice <= len(peers):
+                            peer_ip = peers[choice - 1]
+                            break
+                        else:
+                            print("Invalid number. Try again.")
+                    except ValueError:
+                        print("Please enter a numeric value.")
 
-            if all(downloaded):
-                with open("copyOf" + filename, 'wb') as f:
-                    for chunk in chunks:
-                        f.write(chunk)
-                print("File downloaded successfully")
-            else:
-                print("Download failed - missing chunks")
+                print(f"\nDownloading from {peer_ip}")
+
+                # Get chunk count
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.connect((peer_ip, 20132))
+                    s.send(f"REQUEST_COUNT {file_hash}".encode())
+                    response = s.recv(BUFFER).decode()
+                    chunk_count = int(response.split()[1])                
+
+                # Download chunks
+                chunks = [None] * chunk_count
+                downloaded = [False] * chunk_count
+                start_time = time.time()
+                timeout = 30
+
+                for i in range(chunk_count):
+                    while time.time() - start_time < timeout:
+                        try:
+                            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                                s.settimeout(5)
+                                s.connect((peer_ip, 20132))
+                                s.send(f"REQUESTING_CHUNK {i} {file_hash}".encode())
+                                
+                                header = recv_until(s, b'|')
+                                parts = header.decode().split()
+                                chunk_len = int(parts[2])
+                                chunk = recv_exact(s, chunk_len)
+                                if hasher(chunk).hexdigest() == parts[3]:
+                                    chunks[i] = chunk
+                                    downloaded[i] = True
+                                    print(f"Chunk {i} downloaded")
+                                    # Send ACK to uploader
+                                    # Comment ACK to test
+                                    s.send(b"ACK")
+                                    break
+                        except:
+                            print(f"Error downloading chunk {i}, retrying...")
+                    if all(downloaded):
+                        with open(filename, 'wb') as f:
+                            for chunk in chunks:
+                                if chunk:  # Add null check
+                                    f.write(chunk)
+                        print("File downloaded successfully")
+                    else:
+                        print("Download failed - missing chunks")
+
+            except Exception as e:
+                print(f"Download error: {str(e)}")
+                import traceback
+                traceback.print_exc()
 
         else:
             print("Invalid command")
