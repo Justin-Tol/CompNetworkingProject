@@ -3,6 +3,7 @@ import threading
 import os
 from hashlib import sha256 as hasher
 import time
+import random
 
 BUFFER = 2048
 IP = "127.0.0.1"
@@ -164,6 +165,8 @@ def peer():
                     continue
                     
                 print("\nAvailable peers:")
+                fromAll = False
+                print(f'0. all')
                 for idx, peer_ip in enumerate(peers, 1):
                     print(f"{idx}. {peer_ip}")
                 
@@ -172,6 +175,10 @@ def peer():
                         choice = int(input("\nEnter peer number to download from: "))
                         if 1 <= choice <= len(peers):
                             peer_ip = peers[choice - 1][0]
+                            break
+                        elif choice == 0:
+                            fromAll = True
+                            peer_ip = peers[0][0]
                             break
                         else:
                             print("Invalid number. Try again.")
@@ -197,6 +204,9 @@ def peer():
                     while time.time() - start_time < timeout:
                         try:
                             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                                if(fromAll):
+                                    peer_ip = random.choice(peers)[0]
+                                print(f"\nDownloading from {peer_ip}")
                                 s.settimeout(5)
                                 s.connect((peer_ip, 20132))
                                 s.send(f"REQUESTING_CHUNK {i} {file_hash}".encode())
@@ -216,7 +226,7 @@ def peer():
                         except:
                             print(f"Error downloading chunk {i}, retrying...")
                     if all(downloaded):
-                        with open(filename, 'wb') as f:
+                        with open("copyOf" + filename, 'wb') as f:
                             for chunk in chunks:
                                 if chunk:  # Add null check
                                     f.write(chunk)

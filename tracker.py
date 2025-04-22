@@ -25,9 +25,14 @@ def handle_command(conn, addr, command):
                 with LOCK: 
                     print(f'current peers before adding: {peers}')
                     print(f'new peer address: {addr}')
-                    if addr not in peers:
-                        peers.append((addr[0], 20132))
-                        print(f"Added new peer: {(addr[0], 20132)}")
+                    if (addr[0], 20132) not in peers or ((addr[0], 20132) in peers and (addr[0], 20133) not in peers):
+                        if ((addr[0], 20132) in peers and (addr[0], 20133) not in peers):
+                            portOption = 20133
+                        else:
+                            portOption = 20132
+                        peers.append((addr[0], portOption))
+                        print(f"Added new peer: {(addr[0], portOption)}")
+                    
 
                 # Remove existing entries with the same filename but different hash
                 existing_hashes = [h for h in files if files[h]["fileName"] == fileName and h != fileHash]
