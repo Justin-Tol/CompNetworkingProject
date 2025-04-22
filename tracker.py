@@ -32,23 +32,18 @@ def handle_command(conn, addr, command):
                             portOption = 20132
                         peers.append((addr[0], portOption))
                         print(f"Added new peer: {(addr[0], portOption)}")
-                    
-
-                # Remove existing entries with the same filename but different hash
-                existing_hashes = [h for h in files if files[h]["fileName"] == fileName and h != fileHash]
-                for h in existing_hashes:
-                    del files[h]
+    
 
                 # Add or update the current fileHash entry
                 if fileHash in files:
                     # Avoid duplicate peer entries
                     if addr[0] not in files[fileHash]["peers"]:
-                        files[fileHash]["peers"].append(addr[0])
+                        files[fileName]["peers"].append(addr[0])
                 else:
                     # Create new entry
-                    files[fileHash] = {
-                        "fileName": fileName,
-                        "peers": [addr]
+                    files[fileName] = {
+                        "fileHash": fileHash,
+                        "peers": [addr[0]]
                     }
 
                 conn.send("UPLOADING_OK".encode())
@@ -68,16 +63,16 @@ def handle_command(conn, addr, command):
 
         elif parts[0] == "REQUEST_FILENAMES":
             with LOCK:
-                fileNames = [files[hash]["fileName"] for hash in files]
+                fileNames = [name for name in files]
                 message = f"FILENAMES {' '.join(fileNames)}"
                 conn.send(message.encode())
 
         elif parts[0] == "REQUEST_HASH":
              fileName = parts[1]
-             for hash, data in files.items():
-                 if data["fileName"] == fileName:
-                     conn.send(f"HASH {hash}".encode())
-                     break
+             if fileName in files:
+                hash = files[fileName]["fileHash"]
+                conn.send(f"HASH {hash}".encode())
+                
              else:
                  conn.send(b"FILE_NOT_FOUND")
         

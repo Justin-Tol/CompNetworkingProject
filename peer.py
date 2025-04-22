@@ -152,7 +152,7 @@ def peer():
                 # Get peers from tracker
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.connect(TRACKER_ADDR)
-                    s.send(f"REQUEST_PEERS {file_hash}".encode())
+                    s.send(f"REQUEST_PEERS {filename}".encode())
                     response = s.recv(BUFFER).decode()
                     if not response.startswith("PEERS"):
                         print("No peers found")
@@ -174,17 +174,19 @@ def peer():
                     try:
                         choice = int(input("\nEnter peer number to download from: "))
                         if 1 <= choice <= len(peers):
-                            peer_ip = peers[choice - 1][0]
+                            peer_ip = peers[choice - 1]
                             break
                         elif choice == 0:
                             fromAll = True
-                            peer_ip = peers[0][0]
+                            peer_ip = peers[0]
                             break
                         else:
                             print("Invalid number. Try again.")
                     except ValueError:
                         print("Please enter a numeric value.")
 
+                print(peers)
+                print(peer_ip)
                 print(f"\nDownloading from {peer_ip}")
 
                 # Get chunk count
@@ -205,7 +207,7 @@ def peer():
                         try:
                             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                                 if(fromAll):
-                                    peer_ip = random.choice(peers)[0]
+                                    peer_ip = random.choice(peers)
                                 print(f"\nDownloading from {peer_ip}")
                                 s.settimeout(5)
                                 s.connect((peer_ip, 20132))
