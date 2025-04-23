@@ -36,10 +36,11 @@ def handle_command(conn, addr, command):
     
 
                 # Add or update the current fileHash entry
-                if fileHash in files:
+                if fileName in files:
                     # Avoid duplicate peer entries
-                    if addr[0] not in files[fileHash]["peers"]:
+                    if addr[0] not in files[fileName]["peers"]:
                         files[fileName]["peers"].append(addr[0])
+                    files[fileName]["version"] = versionNum
                 else:
                     # Create new entry
                     files[fileName] = {
