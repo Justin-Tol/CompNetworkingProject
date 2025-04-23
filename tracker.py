@@ -3,7 +3,7 @@ import threading
 import time
 
 BUFFER = 1024
-IP = "127.0.0.1"
+IP = "10.33.16.107"
 PORT = 20131
 LOCK = threading.Lock()
 PING_INTERVAL = 10
@@ -56,10 +56,16 @@ def handle_command(conn, addr, command):
             conn.send("UPLOADING_OK".encode())
 
         elif parts[0] == "REQUEST_PEERS":
-            fileHash = parts[1]
+            
+            print("received peer request")
+            fileName = parts[1]
+            fileHash = files[fileName]["fileHash"]
+
+            print(f'filename: {fileName}')
+
             with LOCK:
-                if fileHash in files and files[fileHash]["peers"]:  
-                    peers_list = files[fileHash]["peers"]
+                if fileName in files and files[fileName]["peers"]:  
+                    peers_list = files[fileName]["peers"]
                     conn.send(f"PEERS {peers_list}".encode())
                 else:
                     conn.send(b"FILE_NOT_FOUND")

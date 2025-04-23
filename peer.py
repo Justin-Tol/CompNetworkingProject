@@ -6,9 +6,9 @@ import time
 import random
 
 BUFFER = 2048
-IP = "127.0.0.1"
+IP = "10.33.16.107"
 PORT = 20132
-TRACKER_ADDR = ('127.0.0.1', 20131)
+TRACKER_ADDR = ('10.33.16.107', 20131)
 CHUNK_SIZE = 1024
 
 uploadedFiles = {}
@@ -29,10 +29,13 @@ def handleDownload(filename):
         s.connect(TRACKER_ADDR)
         s.send(f"REQUEST_PEERS {filename}".encode())
         response = s.recv(BUFFER).decode()
+        print(response)
+        peers = []
         if not response.startswith("PEERS"):
             print("No peers found")
             
-        peers = eval(response.split(' ', 1)[1])
+        else: 
+            peers = eval(response.split(' ', 1)[1])
 
     # Display peers and let user choose
     if not peers:
