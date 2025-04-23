@@ -40,13 +40,13 @@ def handle_peer_connection(conn, addr):
             return
         parts = data.split(" ")
         if parts[0] == "REQUEST_COUNT":
-            fileHash = parts[1]
-            response = f"CHUNK_COUNT {len(uploadedFiles[fileHash]['chunks'])}"
+            filename = parts[1]
+            response = f"CHUNK_COUNT {len(uploadedFiles[filename]['chunks'])}"
             conn.send(response.encode())
         elif parts[0] == "REQUESTING_CHUNK":
             chunkIndex = int(parts[1])
-            fileHash = parts[2]
-            chunk = uploadedFiles[fileHash]["chunks"][chunkIndex]
+            filename = parts[2]
+            chunk = uploadedFiles[filename]["chunks"][chunkIndex]
             chunk_hash = hasher(chunk).hexdigest()
             header = f"SENDING_CHUNK {chunkIndex} {len(chunk)} {chunk_hash}|".encode()
             conn.send(header + chunk)
@@ -87,7 +87,8 @@ def peer():
         s.connect(TRACKER_ADDR)
         s.send(b"REQUEST_FILENAMES")
         data = s.recv(BUFFER).decode()
-        print(f"Available files: {data.split(' ', 1)[1]}")
+        fileNames = data.split(' ', 1)[1]
+        print(f"Available files: {fileNames}")
 
     while True:
         command = input("Input command: ").strip()
@@ -111,22 +112,38 @@ def peer():
                     hash_obj.update(chunk)
             file_hash = hash_obj.hexdigest()
             filename = os.path.basename(filepath)
+            versionNum = 1
+            if filename in fileNames:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.connect(TRACKER_ADDR)
+                    s.send(f"REQUEST_VER {filename}".encode())
+                    response = s.recv(BUFFER).decode()
+                    print(f'response: {response}')
+                    if response.startswith("VER"):
+                        versionNum = response.split(" ")[1]
 
+                        if filename in uploadedFiles.keys():
+                            localVer = uploadedFiles[filename]["version"]
+                    else:
+                        print("Error receiving version number")
             # Prepare chunks
             chunks = []
             with open(filepath, 'rb') as f:
                 while chunk := f.read(CHUNK_SIZE):
                     chunks.append(chunk)
-            uploadedFiles[file_hash] = {
-                "fileName": filename,
+
+            
+            uploadedFiles[filename] = {
+                "fileHash": file_hash,
                 "chunks": chunks,
-                "chunkCount": len(chunks)
+                "chunkCount": len(chunks),
+                "version": versionNum
             }
 
             # Notify tracker
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect(TRACKER_ADDR)
-                s.send(f"UPLOADING {filename} {file_hash}".encode())
+                s.send(f"UPLOADING {filename} {file_hash} {versionNum}".encode())
                 response = s.recv(BUFFER)
                 if response == b"UPLOADING_OK":
                     print("File uploaded successfully")
@@ -192,7 +209,7 @@ def peer():
                 # Get chunk count
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.connect((peer_ip, 20132))
-                    s.send(f"REQUEST_COUNT {file_hash}".encode())
+                    s.send(f"REQUEST_COUNT {filename}".encode())
                     response = s.recv(BUFFER).decode()
                     chunk_count = int(response.split()[1])                
 
@@ -211,7 +228,7 @@ def peer():
                                 print(f"\nDownloading from {peer_ip}")
                                 s.settimeout(5)
                                 s.connect((peer_ip, 20132))
-                                s.send(f"REQUESTING_CHUNK {i} {file_hash}".encode())
+                                s.send(f"REQUESTING_CHUNK {i} {filename}".encode())
                                 
                                 header = recv_until(s, b'|')
                                 parts = header.decode().split()

@@ -21,6 +21,7 @@ def handle_command(conn, addr, command):
         if parts[0] == "UPLOADING":
             fileHash = parts[2]
             fileName = parts[1]
+            versionNum = parts[3]
             try:
                 with LOCK: 
                     print(f'current peers before adding: {peers}')
@@ -43,7 +44,8 @@ def handle_command(conn, addr, command):
                     # Create new entry
                     files[fileName] = {
                         "fileHash": fileHash,
-                        "peers": [addr[0]]
+                        "peers": [addr[0]],
+                        "version": 1
                     }
 
                 conn.send("UPLOADING_OK".encode())
@@ -75,6 +77,13 @@ def handle_command(conn, addr, command):
                 
              else:
                  conn.send(b"FILE_NOT_FOUND")
+
+        elif parts[0] == "REQUEST_VER":
+            print("received ver request")
+            fileName = parts[1]
+            if fileName in files.keys():
+                versionNum = files[fileName]["version"]
+                conn.send(f'VER {versionNum}'.encode())
         
     except Exception as e:
         print(f"Error handling command: {e}")
