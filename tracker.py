@@ -3,7 +3,7 @@ import threading
 import time
 
 BUFFER = 1024
-IP = "10.33.16.107"
+IP = "10.33.16.151"
 PORT = 20131
 LOCK = threading.Lock()
 PING_INTERVAL = 10
@@ -24,15 +24,15 @@ def handle_command(conn, addr, command):
             versionNum = parts[3]
             try:
                 with LOCK: 
-                    print(f'current peers before adding: {peers}')
-                    print(f'new peer address: {addr}')
+                    #print(f'current peers before adding: {peers}')
+                    #print(f'new peer address: {addr}')
                     if (addr[0], 20132) not in peers or ((addr[0], 20132) in peers and (addr[0], 20133) not in peers):
                         if ((addr[0], 20132) in peers and (addr[0], 20133) not in peers):
                             portOption = 20133
                         else:
                             portOption = 20132
                         peers.append((addr[0], portOption))
-                        print(f"Added new peer: {(addr[0], portOption)}")
+                        #print(f"Added new peer: {(addr[0], portOption)}")
     
 
                 # Add or update the current fileHash entry
@@ -52,16 +52,16 @@ def handle_command(conn, addr, command):
                 conn.send("UPLOADING_OK".encode())
             except Exception as e:
                 conn.send(str(e).encode())
-            print(files)
+            #print(files)
             conn.send("UPLOADING_OK".encode())
 
         elif parts[0] == "REQUEST_PEERS":
             
-            print("received peer request")
+            #print("received peer request")
             fileName = parts[1]
             fileHash = files[fileName]["fileHash"]
 
-            print(f'filename: {fileName}')
+            #print(f'filename: {fileName}')
 
             with LOCK:
                 if fileName in files and files[fileName]["peers"]:  
@@ -86,7 +86,7 @@ def handle_command(conn, addr, command):
                  conn.send(b"FILE_NOT_FOUND")
 
         elif parts[0] == "REQUEST_VER":
-            print("received ver request")
+            #print("received ver request")
             fileName = parts[1]
             if fileName in files.keys():
                 versionNum = files[fileName]["version"]

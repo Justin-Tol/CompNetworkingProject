@@ -6,9 +6,9 @@ import time
 import random
 
 BUFFER = 2048
-IP = "10.33.16.107"
+IP = "10.33.16.151"
 PORT = 20132
-TRACKER_ADDR = ('10.33.16.107', 20131)
+TRACKER_ADDR = ('10.33.16.151', 20131)
 CHUNK_SIZE = 1024
 
 uploadedFiles = {}
@@ -29,7 +29,7 @@ def handleDownload(filename):
         s.connect(TRACKER_ADDR)
         s.send(f"REQUEST_PEERS {filename}".encode())
         response = s.recv(BUFFER).decode()
-        print(response)
+        #print(response)
         peers = []
         if not response.startswith("PEERS"):
             print("No peers found")
@@ -62,8 +62,8 @@ def handleDownload(filename):
         except ValueError:
             print("Please enter a numeric value.")
 
-    print(peers)
-    print(peer_ip)
+    #print(peers)
+    #print(peer_ip)
     print(f"\nDownloading from {peer_ip}")
 
     # Get chunk count
@@ -162,7 +162,7 @@ def handle_peer_connection(conn, addr):
                 print(f"Timeout waiting for ACK for chunk {chunkIndex}")
         elif parts[0] == "PING":
 
-            print(f'pong back to {addr}')
+            #print(f'pong back to {addr}')
             conn.send(b'PONG')
     finally:
         conn.close()
@@ -183,14 +183,15 @@ def peer():
     threading.Thread(target=start_server, daemon=True).start()
 
     # Initial file list request
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect(TRACKER_ADDR)
-        s.send(b"REQUEST_FILENAMES")
-        data = s.recv(BUFFER).decode()
-        fileNames = data.split(' ', 1)[1]
-        print(f"Available files: {fileNames}")
+    
 
     while True:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect(TRACKER_ADDR)
+            s.send(b"REQUEST_FILENAMES")
+            data = s.recv(BUFFER).decode()
+            fileNames = data.split(' ', 1)[1]
+        print(f"Available files: {fileNames}")
         command = input("Input command: ").strip()
         parts = command.split()
         if not parts:
@@ -241,8 +242,9 @@ def peer():
                                 print("uploading new version " + str(versionNum))
                             else:
                                 print("conflict local version does not match tracker")
+                                
 
-                                with open("oldVer" + str(localVer) + filename, "wb") as f:
+                                with open("ver" + str(localVer) + "+" + filename, "wb") as f:
                                     for chunk in chunks:
                                         if chunk:  # Add null check
                                             f.write(chunk)
