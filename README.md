@@ -111,7 +111,7 @@ Example response: OK after processing a request.
 
 *Protocol Diagram*
 
-<img src="images/protocol.png" alt="Protocol Diagram">
+<img src="images/projectprotocol.png" alt="Protocol Diagram">
 
 - The protocol for file downloading involves a peer talking to a peer
 
