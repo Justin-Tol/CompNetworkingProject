@@ -45,7 +45,11 @@ We will visualize the step by step process of both the Peer and Tracker through 
 
 The tracker goes into an idle state when the network is created, waiting for peers to send commands to it. 
 
-**2. Processing Commands/Data**
+**2. File Duplication Verification**
+
+When a peer wants to upload a file and the file name of the incoming file has already been found in the list of file in the tracker, the tracker will undergo file duplcation verification. If the same name is found then it will update the version number next to it, otherwise it will go straight to processing.
+
+**3. Processing Commands/Data**
 
 The processing of the commands involves the splitting of the command into 3 processable parts. They are the request (instructions), file name, and file hash. The file name and file hash parts are only included in certain requests and can depend on which requests are executed. They are:
 
@@ -104,3 +108,48 @@ Example response: OK after processing a request.
 
 - Retrieves file chunks and verifies integrity using hashes.
 
+
+*Protocol Diagram*
+
+<img src="images/protocol.png" alt="Protocol Diagram">
+
+- The protocol for file downloading involves a peer talking to a peer
+
+ Peer Requests File Names
+Peer sends REQUESTING_FILENAMES to the tracker.
+
+Tracker responds with the list of available filenames.
+
+**2. Peer Requests to Upload File**
+Peer sends an upload request with a file hash and filename to the tracker.
+
+Tracker verifies the hash (to prevent duplicates).
+
+Sends back an OK ACK and starts a timer for peer inactivity tracking.
+
+**3. Peer Requests Chunk Count (Download)**
+Another peer (Peer 2) initiates a download by first requesting the number of chunks from the uploading peer.
+
+Peer 1 responds with the chunk count.
+
+**4. Peer Requests Chunks**
+Peer 2 begins requesting chunks one by one.
+
+Peer 1 sends each chunk and starts a timeout timer for each until an ACK is received.
+
+If no ACK is received, it retries or exits after a limit.
+
+**5. Peer Sends Download OK Acknowledge**
+Once all chunks are received successfully, Peer 2 sends a final Download OK ACK to Peer 1.
+
+**6. Tracker Interaction During Download**
+Peer 2 may also request file hashes and peer availability from the tracker during download.
+
+Tracker responds with file hash and peer info.
+
+🔁 Timeout Mechanism for Chunk Retrieval
+A timer is started by the sending peer after sending each chunk.
+
+If ACK is not received before timeout, it may retry or abort.
+
+After timeout or download completion, the sending peer returns to idle/user-listening state.
