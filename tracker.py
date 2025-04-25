@@ -3,7 +3,7 @@ import threading
 import time
 
 BUFFER = 1024
-IP = "127.0.0.1"
+IP = "10.33.16.151"
 PORT = 20131
 LOCK = threading.Lock()
 PING_INTERVAL = 10
@@ -21,60 +21,76 @@ def handle_command(conn, addr, command):
         if parts[0] == "UPLOADING":
             fileHash = parts[2]
             fileName = parts[1]
+            versionNum = parts[3]
             try:
                 with LOCK: 
-                    print(f'current peers before adding: {peers}')
-                    print(f'new peer address: {addr}')
-                    if addr not in peers:
-                        peers.append((addr[0], 20132))
-                        print(f"Added new peer: {(addr[0], 20132)}")
-
-                # Remove existing entries with the same filename but different hash
-                existing_hashes = [h for h in files if files[h]["fileName"] == fileName and h != fileHash]
-                for h in existing_hashes:
-                    del files[h]
+                    #print(f'current peers before adding: {peers}')
+                    #print(f'new peer address: {addr}')
+                    if (addr[0], 20132) not in peers or ((addr[0], 20132) in peers and (addr[0], 20133) not in peers):
+                        if ((addr[0], 20132) in peers and (addr[0], 20133) not in peers):
+                            portOption = 20133
+                        else:
+                            portOption = 20132
+                        peers.append((addr[0], portOption))
+                        #print(f"Added new peer: {(addr[0], portOption)}")
+    
 
                 # Add or update the current fileHash entry
-                if fileHash in files:
+                if fileName in files:
                     # Avoid duplicate peer entries
-                    if addr[0] not in files[fileHash]["peers"]:
-                        files[fileHash]["peers"].append(addr[0])
+                    if addr[0] not in files[fileName]["peers"]:
+                        files[fileName]["peers"].append(addr[0])
+                    files[fileName]["version"] = versionNum
                 else:
                     # Create new entry
-                    files[fileHash] = {
-                        "fileName": fileName,
-                        "peers": [addr]
+                    files[fileName] = {
+                        "fileHash": fileHash,
+                        "peers": [addr[0]],
+                        "version": 1
                     }
 
                 conn.send("UPLOADING_OK".encode())
             except Exception as e:
                 conn.send(str(e).encode())
-            print(files)
+            #print(files)
             conn.send("UPLOADING_OK".encode())
 
         elif parts[0] == "REQUEST_PEERS":
-            fileHash = parts[1]
+            
+            #print("received peer request")
+            fileName = parts[1]
+            fileHash = files[fileName]["fileHash"]
+
+            #print(f'filename: {fileName}')
+
             with LOCK:
-                if fileHash in files and files[fileHash]["peers"]:  
-                    peers_list = files[fileHash]["peers"]
+                if fileName in files and files[fileName]["peers"]:  
+                    peers_list = files[fileName]["peers"]
                     conn.send(f"PEERS {peers_list}".encode())
                 else:
                     conn.send(b"FILE_NOT_FOUND")
 
         elif parts[0] == "REQUEST_FILENAMES":
             with LOCK:
-                fileNames = [files[hash]["fileName"] for hash in files]
+                fileNames = [name for name in files]
                 message = f"FILENAMES {' '.join(fileNames)}"
                 conn.send(message.encode())
 
         elif parts[0] == "REQUEST_HASH":
              fileName = parts[1]
-             for hash, data in files.items():
-                 if data["fileName"] == fileName:
-                     conn.send(f"HASH {hash}".encode())
-                     break
+             if fileName in files:
+                hash = files[fileName]["fileHash"]
+                conn.send(f"HASH {hash}".encode())
+                
              else:
                  conn.send(b"FILE_NOT_FOUND")
+
+        elif parts[0] == "REQUEST_VER":
+            #print("received ver request")
+            fileName = parts[1]
+            if fileName in files.keys():
+                versionNum = files[fileName]["version"]
+                conn.send(f'VER {versionNum}'.encode())
         
     except Exception as e:
         print(f"Error handling command: {e}")
